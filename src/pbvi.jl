@@ -55,7 +55,7 @@ end
 
 # Eq. (5) Osogami 2015
 # from p[z,a,t] to p[t,z,s]
-function minutil(b::Vector{Float64}, pomdp::RPOMDP, a, alphavecs::Vector{Vector{Float64}})
+function minutil(pomdp::RPOMDP, b::Vector{Float64}, a, alphavecs::Vector{Vector{Float64}})
     nz = n_observations(pomdp)
     ns = n_states(pomdp)
     nα = length(alphavecs)
@@ -91,19 +91,50 @@ function findαz(zind::Int, u::Vector{Float64}, b::Vector{Float64}, p::Array{Flo
     αz
 end
 
-function αstar(rpomdp::RPOMDP, s, a, pstar::Array{Float64}, alphaveczstar::Array{Array{Float64}})
+function findαstar(rpomdp::RPOMDP, s, a, pstar::Array{Float64}, alphaveczstar::Array{Array{Float64}})
     γ = rpomdp.discount
     ns = n_states(rpomdp)
     nz = n_observations(rpomdp)
     sind = state_index(rpomdp, s)
     αstars = reward(rpomdp, s, a)
     for tind in 1:ns, zind in 1:nz
-        αstars += γ * pstar[tind, zind, s] * alphaveczstar[zind][tind]
+        αstars += γ * pstar[tind, zind, sind] * alphaveczstar[zind][tind]
     end
     αstars
 end
 
-
+function robustdpval(alphaset::Set{Vector{Float64}}, beliefset::Vector{Vector{Float64}}, rp::RPOMDP)
+    newalphaset = Set{Vector{Float64}}()
+    bcount = 0
+    for b in beliefset
+        newalphasetb = Set{Vector{Float64}}()
+        for a in ordered_actions(rp)
+            u, pstar = minutil(rp, b, a, collect(alphaset))
+            αz = Array{Array{Float64}}(n_observations(rp))
+            αstar = Vector{Float64}(n_states(rp))
+            for (zind, z) in enumerate(ordered_observations(rp))
+                αz[zind] = findαz(zind, u, b, pstar, collect(alphaset))
+            end
+            for (sind, s) in enumerate(ordered_states(rp))
+                αstar[sind] = findαstar(rp, s, a, pstar, αz)
+            end
+            push!(newalphasetb, αstar)
+        end
+        αmax = nothing
+        vmax = -Inf
+        for α in newalphasetb
+            if b' * α > vmax
+                vmax = b' * α
+                αmax = copy(α)
+            end
+        end
+        bcount += 1
+        @show bcount
+        @show αmax
+        newalphaset = push!(newalphaset, αmax)
+    end
+    newalphaset
+end
 
 
 
