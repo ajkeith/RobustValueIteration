@@ -103,11 +103,17 @@ function findαstar(rpomdp::RPOMDP, s, a, pstar::Array{Float64}, alphaveczstar::
     αstars
 end
 
-function robustdpval(alphaset::Set{Vector{Float64}}, beliefset::Vector{Vector{Float64}}, rp::RPOMDP)
-    newalphaset = Set{Vector{Float64}}()
+"""
+    robustdpupdate(αset, beliefset, rpomdp)
+
+Robust point-based dynamic programming backup value of `αset` for `beliefset` in `rpomdp`.
+"""
+function robustdpupdate(Vold::Set{AlphaVec}, beliefset::Vector{Vector{Float64}}, rp::RPOMDP)
+    alphaset = Set([avec.alpha for avec in Vold])
+    Vnew = Set{AlphaVec}()
     bcount = 0
     for b in beliefset
-        newalphasetb = Set{Vector{Float64}}()
+        Vbset = Set{AlphaVec}()
         for a in ordered_actions(rp)
             u, pstar = minutil(rp, b, a, collect(alphaset))
             αz = Array{Array{Float64}}(n_observations(rp))
@@ -118,127 +124,72 @@ function robustdpval(alphaset::Set{Vector{Float64}}, beliefset::Vector{Vector{Fl
             for (sind, s) in enumerate(ordered_states(rp))
                 αstar[sind] = findαstar(rp, s, a, pstar, αz)
             end
-            push!(newalphasetb, αstar)
+            push!(Vbset, AlphaVec(αstar,a))
         end
         αmax = nothing
         vmax = -Inf
-        for α in newalphasetb
-            if b' * α > vmax
-                vmax = b' * α
-                αmax = copy(α)
+        for α in Vbset
+            if b' * α.alpha > vmax
+                vmax = b' * α.alpha
+                αmax = α
             end
         end
         bcount += 1
         @show bcount
         @show αmax
-        newalphaset = push!(newalphaset, αmax)
+        Vnew = push!(Vnew, αmax)
     end
-    newalphaset
+    Vnew
 end
 
 
 
-# """
-#     dpval(α, a, z, pomdp)
-#
-# Dynamic programming backup value of `α` for action `a` and observation `z` in `pomdp`.
-# """
-# function dpval(α::Array{Float64,1}, a, z, prob::POMDP)
-#     S = ordered_states(prob)
-#     A = ordered_actions(prob)
-#     ns = n_states(prob)
-#     nz = n_observations(prob)
-#     γ = discount(prob)
-#     τ = Array{Float64,1}(ns)
-#     for (sind,s) in enumerate(S)
-#         dist_t = transition(prob,s,a)
-#         exp_sum = 0.0
-#         for (spind, sp) in enumerate(S)
-#             dist_o = observation(prob,a,sp)
-#             pt = pdf(dist_t,sp)
-#             po = pdf(dist_o,z)
-#             exp_sum += α[spind] * po * pt
-#         end
-#         τ[sind] = (1 / nz) * reward(prob,s,a) + γ * exp_sum
-#     end
-#     τ
-# end
-#
-# """
-#     dpupdate(F, pomdp)
-#
-# Dynamic programming update of `pomdp` for the set of alpha vectors `F`.
-# """
-# function dpupdate(F::Set{AlphaVec}, prob::POMDP)
-#     alphas = [avec.alpha for avec in F]
-#     A = ordered_actions(prob)
-#     Z = ordered_observations(prob)
-#     na = n_actions(prob)
-#     nz = n_observations(prob)
-#     Sp = Set{AlphaVec}()
-#     # tcount = 0
-#     Sa = Set{AlphaVec}()
-#     for (aind, a) in enumerate(A)
-#         Sz = Vector{Set{Vector{Float64}}}(nz)
-#         for (zind, z) in enumerate(Z)
-#             # tcount += 1
-#             # println("DP Update Inner Loop: $tcount")
-#             V = Set(dpval(α,a,z,prob) for α in alphas)
-#             # println("V: $V")
-#             Sz[zind] = filtervec(V)
-#         end
-#         Sa = Set([AlphaVec(α,a) for α in incprune(Sz)])
-#         union!(Sp,Sa)
-#     end
-#     filtervec(Sp)
-# end
-#
-# """
-#     diffvalue(Vnew, Vold, pomdp)
-#
-# Maximum difference between new alpha vectors `Vnew` and old alpha vectors `Vold` in `pomdp`.
-# """
-# function diffvalue(Vnew::Vector{AlphaVec},Vold::Vector{AlphaVec},pomdp::POMDP)
-#     ns = n_states(pomdp) # number of states in alpha vector
-#     S = ordered_states(pomdp)
-#     A = ordered_actions(pomdp)
-#     Anew = [avec.alpha for avec in Vnew]
-#     Aold = [avec.alpha for avec in Vold]
-#     dmax = -Inf # max difference
-#     for avecnew in Anew
-#         L = Model(solver = ClpSolver())
-#         @variable(L, x[1:ns])
-#         @variable(L, t)
-#         @objective(L, :Max, t)
-#         @constraint(L, x .>= 0)
-#         @constraint(L, x .<= 1)
-#         @constraint(L, sum(x) == 1)
-#         for avecold in Aold
-#             @constraint(L, (avecnew - avecold)' * x >= t)
-#         end
-#         sol = JuMP.solve(L)
-#         dmax = max(dmax, getobjectivevalue(L))
-#     end
-#     rmin = minimum(reward(pomdp,s,a) for s in S, a in A) # minimum reward
-#     if rmin < 0 # if negative rewards, find max difference from old to new
-#         for avecold in Aold
-#             L = Model(solver = ClpSolver())
-#             @variable(L, x[1:ns])
-#             @variable(L, t)
-#             @objective(L, :Max, t)
-#             @constraint(L, x .>= 0)
-#             @constraint(L, x .<= 1)
-#             @constraint(L, sum(x) == 1)
-#             for avecnew in Anew
-#                 @constraint(L, (avecold - avecnew)' * x >= t)
-#             end
-#             sol = JuMP.solve(L)
-#             dmax = max(dmax, getobjectivevalue(L))
-#         end
-#     end
-#     dmax
-# end
-#
+"""
+    diffvalue(Vnew, Vold, pomdp)
+
+Maximum difference between new alpha vectors `Vnew` and old alpha vectors `Vold` in `pomdp`.
+"""
+function diffvalue(Vnew::Vector{AlphaVec}, Vold::Vector{AlphaVec}, rpomdp::RPOMDP)
+    ns = n_states(pomdp) # number of states in alpha vector
+    S = ordered_states(pomdp)
+    A = ordered_actions(pomdp)
+    Anew = [avec.alpha for avec in Vnew]
+    Aold = [avec.alpha for avec in Vold]
+    dmax = -Inf # max difference
+    for avecnew in Anew
+        L = Model(solver = ClpSolver())
+        @variable(L, x[1:ns])
+        @variable(L, t)
+        @objective(L, :Max, t)
+        @constraint(L, x .>= 0)
+        @constraint(L, x .<= 1)
+        @constraint(L, sum(x) == 1)
+        for avecold in Aold
+            @constraint(L, (avecnew - avecold)' * x >= t)
+        end
+        sol = JuMP.solve(L)
+        dmax = max(dmax, getobjectivevalue(L))
+    end
+    rmin = minimum(reward(pomdp,s,a) for s in S, a in A) # minimum reward
+    if rmin < 0 # if negative rewards, find max difference from old to new
+        for avecold in Aold
+            L = Model(solver = ClpSolver())
+            @variable(L, x[1:ns])
+            @variable(L, t)
+            @objective(L, :Max, t)
+            @constraint(L, x .>= 0)
+            @constraint(L, x .<= 1)
+            @constraint(L, sum(x) == 1)
+            for avecnew in Anew
+                @constraint(L, (avecold - avecnew)' * x >= t)
+            end
+            sol = JuMP.solve(L)
+            dmax = max(dmax, getobjectivevalue(L))
+        end
+    end
+    dmax
+end
+
 # """
 #     solve(solver::PruneSolver, pomdp)
 #
@@ -265,7 +216,7 @@ end
 #     policy = AlphaVectorPolicy(prob, alphas_new, actions_new)
 #     return policy
 # end
-#
+
 # @POMDP_require solve(solver::PruneSolver, pomdp::POMDP) begin
 #     P = typeof(pomdp)
 #     S = state_type(P)
