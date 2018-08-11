@@ -14,7 +14,7 @@ end
 
 Initialize a point-based value iteration solver with the `max_iterations` limit and desired `tolerance`.
 """
-function PBVISolver(;beleifpoints::Vector{Vector{Float64}}=[[0, 1.0], [0.2, 0.8], [0.4, 0.6], [0.6,0.4], [0.8,0.2], [1.0,0.0]], max_iterations::Int64=10, tolerance::Float64=1e-3)
+function PBVISolver(;beliefpoints::Vector{Vector{Float64}}=[[0, 1.0], [0.2, 0.8], [0.4, 0.6], [0.6,0.4], [0.8,0.2], [1.0,0.0]], max_iterations::Int64=10, tolerance::Float64=1e-3)
     return PBVISolver(beliefpoints, max_iterations, tolerance)
 end
 
@@ -111,7 +111,7 @@ Robust point-based dynamic programming backup value of `αset` for `beliefset` i
 function robustdpupdate(Vold::Set{AlphaVec}, beliefset::Vector{Vector{Float64}}, rp::RPOMDP)
     alphaset = Set([avec.alpha for avec in Vold])
     Vnew = Set{AlphaVec}()
-    bcount = 0
+    # bcount = 0
     for b in beliefset
         Vbset = Set{AlphaVec}()
         for a in ordered_actions(rp)
@@ -134,22 +134,20 @@ function robustdpupdate(Vold::Set{AlphaVec}, beliefset::Vector{Vector{Float64}},
                 αmax = α
             end
         end
-        bcount += 1
-        @show bcount
-        @show αmax
+        # bcount += 1
+        # @show bcount
+        # @show αmax
         Vnew = push!(Vnew, αmax)
     end
     Vnew
 end
-
-
 
 """
     diffvalue(Vnew, Vold, pomdp)
 
 Maximum difference between new alpha vectors `Vnew` and old alpha vectors `Vold` in `pomdp`.
 """
-function diffvalue(Vnew::Vector{AlphaVec}, Vold::Vector{AlphaVec}, rpomdp::RPOMDP)
+function diffvalue(Vnew::Vector{AlphaVec}, Vold::Vector{AlphaVec}, pomdp::RPOMDP)
     ns = n_states(pomdp) # number of states in alpha vector
     S = ordered_states(pomdp)
     A = ordered_actions(pomdp)
@@ -190,32 +188,32 @@ function diffvalue(Vnew::Vector{AlphaVec}, Vold::Vector{AlphaVec}, rpomdp::RPOMD
     dmax
 end
 
-# """
-#     solve(solver::PruneSolver, pomdp)
-#
-# AlphaVectorPolicy for `pomdp` caluclated by the incremental pruning algorithm.
-# """
-# function solve(solver::PruneSolver, prob::POMDP)
-#     # println("Solver started...")
-#     ϵ = solver.tolerance
-#     replimit = solver.max_iterations
-#     policy = create_policy(solver, prob)
-#     avecs = [AlphaVec(policy.alphas[i], policy.action_map[i]) for i in 1:length(policy.action_map)]
-#     Vold = Set(avecs)
-#     Vnew = Set{AlphaVec}()
-#     del = Inf
-#     reps = 0
-#     while del > ϵ && reps < replimit
-#         reps += 1
-#         Vnew = dpupdate(Vold, prob)
-#         del = diffvalue(collect(Vnew), collect(Vold), prob)
-#         Vold = Vnew
-#     end
-#     alphas_new = [v.alpha for v in Vnew]
-#     actions_new = [v.action for v in Vnew]
-#     policy = AlphaVectorPolicy(prob, alphas_new, actions_new)
-#     return policy
-# end
+"""
+    solve(solver::PBVISolver, rpomdp)
+
+AlphaVectorPolicy for `pomdp` caluclated by the incremental pruning algorithm.
+"""
+function solve(solver::PBVISolver, prob::RPOMDP)
+    # println("Solver started...")
+    ϵ = solver.tolerance
+    replimit = solver.max_iterations
+    policy = create_policy(solver, prob)
+    avecs = [AlphaVec(policy.alphas[i], policy.action_map[i]) for i in 1:length(policy.action_map)]
+    Vold = Set([AlphaVec(zeros(n_states(prob)), ordered_actions(prob)[1])])
+    Vnew = Set{AlphaVec}()
+    del = Inf
+    reps = 0
+    while del > ϵ && reps < replimit
+        reps += 1
+        Vnew = robustdpupdate(Vold, solver.beliefpoints, prob)
+        del = diffvalue(collect(Vnew), collect(Vold), prob)
+        Vold = Vnew
+    end
+    alphas_new = [v.alpha for v in Vnew]
+    actions_new = [v.action for v in Vnew]
+    policy = AlphaVectorPolicy(prob, alphas_new, actions_new)
+    return policy
+end
 
 # @POMDP_require solve(solver::PruneSolver, pomdp::POMDP) begin
 #     P = typeof(pomdp)
