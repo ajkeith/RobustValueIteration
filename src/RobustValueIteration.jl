@@ -1,7 +1,9 @@
 module RobustValueIteration
 
-using RPOMDPs, RPOMDPToolbox
+using RPOMDPs, RPOMDPToolbox, RPOMDPModels
 using JuMP, Clp
+
+import Base: ==, hash
 
 export
     PBVISolver,

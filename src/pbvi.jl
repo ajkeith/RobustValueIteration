@@ -54,12 +54,13 @@ function create_policy(solver::PBVISolver, pomdp::Union{RPOMDP,POMDP})
 end
 
 # Eq. (5) Osogami 2015
-function minutil(b::Vector{Float64}, pomdp::Union{RPOMDP,POMDP}, alphavecs::Vector{Vector{Float64}})
+# from p[z,a,t] to p[t,z,s]
+function minutil(b::Vector{Float64}, pomdp::RPOMDP, a, alphavecs::Vector{Vector{Float64}})
     nz = n_observations(pomdp)
     ns = n_states(pomdp)
     nα = length(alphavecs)
-    plower = 0.1 + (rand(2,3,2) - 0.5)/10
-    pupper = 0.8 + (rand(2,3,2) - 0.5)/10
+    aind = action_index(pomdp, a)
+    plower, pupper = RPOMDPModels.pinterval(pomdp)
     m = Model(solver = ClpSolver())
     @variable(m, u[1:nz])
     @variable(m, p[1:ns, 1:nz, 1:ns])
@@ -67,14 +68,44 @@ function minutil(b::Vector{Float64}, pomdp::Union{RPOMDP,POMDP}, alphavecs::Vect
     for zind = 1:nz, αind = 1:nα
         @constraint(m, u[zind] >= sum(b[sind] * p[:,zind,sind]' * alphavecs[αind] for sind = 1:ns))
     end
-    @constraint(m, p .<= pupper)
-    @constraint(m, p .>= plower)
+    @constraint(m, p .<= pupper[:,:,:,aind])
+    @constraint(m, p .>= plower[:,:,:,aind])
     for sind = 1:ns
         @constraint(m, sum(p[:,:,sind]) == 1)
     end
     JuMP.solve(m)
     getvalue(u), getvalue(p)
 end
+
+function findαz(zind::Int, u::Vector{Float64}, b::Vector{Float64}, p::Array{Float64}, alphavecs::Vector{Vector{Float64}})
+    TOL = 1e-9
+    αz = nothing
+    ns = size(p, 1)
+    for α in alphavecs
+        s = sum(b[sind] * p[:,zind,sind]' * α for sind = 1:ns)
+        if u[zind] ≈ sum(b[sind] * p[:,zind,sind]' * α for sind = 1:ns) atol = TOL
+            αz = α
+            break
+        end
+    end
+    αz
+end
+
+function αstar(rpomdp::RPOMDP, s, a, pstar::Array{Float64}, alphaveczstar::Array{Array{Float64}})
+    γ = rpomdp.discount
+    ns = n_states(rpomdp)
+    nz = n_observations(rpomdp)
+    sind = state_index(rpomdp, s)
+    αstars = reward(rpomdp, s, a)
+    for tind in 1:ns, zind in 1:nz
+        αstars += γ * pstar[tind, zind, s] * alphaveczstar[zind][tind]
+    end
+    αstars
+end
+
+
+
+
 
 # """
 #     dpval(α, a, z, pomdp)

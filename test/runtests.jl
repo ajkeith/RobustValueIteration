@@ -5,16 +5,45 @@ const PBVI = RobustValueIteration
 TOL = 1e-6
 
 @testset "Robust point-based value iteration" begin
+    # minutil
+    # Eq. (5) Osogami 2015
+    srand(429)
     bset = [[0, 1.0], [0.2, 0.8], [0.4, 0.6], [0.6,0.4], [0.8,0.2], [1.0,0.0]]
     alphavecs = [[2.0, 4.0], [1.0, 5.0], [3.0, 3.0], [4.0, 2.0], [4.0, 3.0], [5.0, 1.0]]
-    pupper = 0.8 + (rand(2,3,2) - 0.5)/10
-    plower = 0.1 + (rand(2,3,2) - 0.5)/10
-    pomdp = Baby3RPOMDP()
+    rpomdp = Baby3RPOMDP()
     b = bset[2]
-    u, p = PBVI.minutil(b, pomdp, alphavecs)
-    @show u
-    @show p
-    @test sum(u) ≈ 3.4 atol = TOL
-    @test all(isapprox.(sum(p, (1,2)), 1.0, atol = TOL)) # p contains distributions
+    u, pstar = PBVI.minutil(b, rpomdp, true, alphavecs)
+    @test sum(u) ≈ 5 atol = TOL
+    @test all(isapprox.(sum(pstar, (1,2)), 1.0, atol = TOL)) # p contains distributions
 
+    # find αz that optimizes Eq. (5)
+    # This is a way of making a non-linear program into two linear programs?
+    nz = n_observations(rpomdp)
+    αz = Array{Array{Float64}}(nz)
+    for zind = 1:nz
+        αz[zind] = PBVI.findαz(zind, u, b, pstar, alphavecs)
+    end
+    @test αz[1] == [1.0, 5.0]
+
+    # find α*
+    s = true
+    a = false
+    αstar = PBVI.αstar(rpomdp, s, a, pstar, αz)
+    @test αstar ≈ -5.5 atol = TOL
 end # testset
+
+#
+# srand(429)
+# bset = [[0, 1.0], [0.2, 0.8], [0.4, 0.6], [0.6,0.4], [0.8,0.2], [1.0,0.0]]
+# alphavecs = [[2.0, 4.0], [1.0, 5.0], [3.0, 3.0], [4.0, 2.0], [4.0, 3.0], [5.0, 1.0]]
+# rpomdp = Baby3RPOMDP()
+# b = bset[2]
+# u, pstar = PBVI.minutil(b, rpomdp, alphavecs)
+# nz = n_observations(rpomdp)
+# αz = Array{Array{Float64}}(nz)
+# for zind = 1:nz
+#     αz[zind] = PBVI.findαz(zind, u, b, pstar, alphavecs)
+# end
+# s = true
+# a = false
+# αstar = PBVI.αstar(rpomdp, s, a, pstar, αz)
