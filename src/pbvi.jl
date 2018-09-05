@@ -91,12 +91,24 @@ function findαz(zind::Int, u::Vector{Float64}, b::Vector{Float64}, p::Array{Flo
     αz
 end
 
-function findαstar(rpomdp::RPOMDP, s, a, pstar::Array{Float64}, alphaveczstar::Array{Array{Float64}})
+function findαstar(rpomdp::RPOMDP, b, s, a, pstar::Array{Float64}, alphaveczstar::Array{Array{Float64}})
     γ = rpomdp.discount
     ns = n_states(rpomdp)
     nz = n_observations(rpomdp)
     sind = state_index(rpomdp, s)
     αstars = reward(rpomdp, s, a)
+    for tind in 1:ns, zind in 1:nz
+        αstars += γ * pstar[tind, zind, sind] * alphaveczstar[zind][tind]
+    end
+    αstars
+end
+
+function findαstar(rpomdp::RrhoPOMDP, b, s, a, pstar::Array{Float64}, alphaveczstar::Array{Array{Float64}})
+    γ = rpomdp.discount
+    ns = n_states(rpomdp)
+    nz = n_observations(rpomdp)
+    sind = state_index(rpomdp, s)
+    αstars = RPOMDPModels.rewardalpha(rpomdp, b, a)[sind]
     for tind in 1:ns, zind in 1:nz
         αstars += γ * pstar[tind, zind, sind] * alphaveczstar[zind][tind]
     end
@@ -122,7 +134,7 @@ function robustdpupdate(Vold::Set{AlphaVec}, beliefset::Vector{Vector{Float64}},
                 αz[zind] = findαz(zind, u, b, pstar, collect(alphaset))
             end
             for (sind, s) in enumerate(ordered_states(rp))
-                αstar[sind] = findαstar(rp, s, a, pstar, αz)
+                αstar[sind] = findαstar(rp, b, s, a, pstar, αz)
             end
             push!(Vbset, AlphaVec(αstar,a))
         end

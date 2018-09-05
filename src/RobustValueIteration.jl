@@ -10,6 +10,5 @@ export
     solve
 
 include("pbvi.jl")
-include("robustpbvi.jl")
 
 end # module
