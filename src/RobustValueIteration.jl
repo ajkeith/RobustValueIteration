@@ -1,13 +1,14 @@
 module RobustValueIteration
 
-using RPOMDPs, RPOMDPToolbox, RPOMDPModels
+using RPOMDPs, RPOMDPModels, RPOMDPToolbox
 using JuMP, Clp
 
 import Base: ==, hash
 
 export
     PBVISolver,
-    solve
+    solve,
+    policyvalue
 
 include("pbvi.jl")
 
