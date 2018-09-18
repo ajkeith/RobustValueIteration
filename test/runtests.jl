@@ -74,7 +74,7 @@ rp = BabyRPOMDP()
 rp2 = BabyRPOMDP(-5.0, -10.0, 0.9, 0.1)
 rip = BabyRIPOMDP()
 
-using IncrementalPruning
+
 solver = PBVISolver(max_iterations = 10000, tolerance = 1e-3)
 solp = RobustValueIteration.solve(solver, p)
 solr = RobustValueIteration.solve(solver, rp)
@@ -82,12 +82,15 @@ solr2 = RobustValueIteration.solve(solver, rp2)
 solr2
 plot(solr2.alphas)
 
+umin, pmin = PBVI.minutil(rp, [0.8, 0.2], :nothing, solr.alphas)
+
+
 sim = RolloutSimulator(max_steps = 1000)
-simulate(sim, p, solr2, DiscreteUpdater(p))
+simulate(sim, rp, solr, DiscreteUpdater(p))
 
 m = 1000
-v = [simulate(sim,p,solr2,DiscreteUpdater(p)) for i = 1:m]
-using Plots
+v = [simulate(sim,p,solp,DiscreteUpdater(p)) for i = 1:m]
+# using Plots
 plot(v)
 mean(v)
 
@@ -97,6 +100,7 @@ b = SparseCat([:hungry, :full], [0.4, 0.6])
 updater(solp)
 updater(solr)
 update(updater(solp),b,:nothing,:crying)
+update(updater(solr),b,:nothing,:crying)
 sim = RolloutSimulator()
 
 
