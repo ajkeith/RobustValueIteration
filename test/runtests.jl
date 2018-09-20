@@ -1,10 +1,11 @@
 using Base.Test
-using RPOMDPModels
+using RPOMDPModels, RPOMDPToolbox
 using RobustValueIteration
 const PBVI = RobustValueIteration
 TOL = 1e-6
 
 @testset "Robust point-based value iteration" begin
+    # minimum probability distribution (minutil)
     srand(429)
     bset = [[0, 1.0], [0.2, 0.8], [0.4, 0.6], [0.6,0.4], [0.8,0.2], [1.0,0.0]]
     alphavecs = Set([PBVI.AlphaVec([2.0, 4.0], true),
@@ -58,53 +59,36 @@ TOL = 1e-6
     @test solip.action_map == [:feed, :feed, :nothing, :feed]
     @test solrp.action_map == [:feed, :nothing, :nothing]
     @test solrip.action_map == [:feed, :feed, :feed, :feed, :feed]
+
+    # simulate
+    sim = RolloutSimulator(max_steps = 1000)
+    pbu = updater(solp)
+    ipbu = updater(solip)
+    rpbu = updater(solrp)
+    ripbu = updater(solrip)
+    @test simulate(sim, p, solp, pbu) ≈ -25.830215565382 atol = 1
+    @test simulate(sim, ip, solip, ipbu) ≈ -25.830215565382 atol = 1
+    @test simulate(sim, rp, solrp, rpbu) ≈ -25.830215565382 atol = 1
+    @test simulate(sim, rip, solrip, ripbu) ≈ -25.830215565382 atol = 1
 end # testset
-
-
-using Base.Test
-using RPOMDPModels
-using RPOMDPToolbox
-using RobustValueIteration
-const PBVI = RobustValueIteration
-TOL = 1e-6
-
-p = BabyPOMDP()
-ip = BabyIPOMDP()
-rp = BabyRPOMDP()
-rp2 = BabyRPOMDP(-5.0, -10.0, 0.9, 0.1)
-rip = BabyRIPOMDP()
-
-
-solver = PBVISolver(max_iterations = 10000, tolerance = 1e-3)
-solp = RobustValueIteration.solve(solver, p)
-solr = RobustValueIteration.solve(solver, rp)
-solr2 = RobustValueIteration.solve(solver, rp2)
-solr2
-plot(solr2.alphas)
-
-umin, pmin = PBVI.minutil(rp, [0.8, 0.2], :nothing, solr.alphas)
-
-
-sim = RolloutSimulator(max_steps = 1000)
-simulate(sim, rp, solr, DiscreteUpdater(p))
-
-m = 1000
-v = [simulate(sim,p,solp,DiscreteUpdater(p)) for i = 1:m]
-# using Plots
-plot(v)
-mean(v)
-
-
-uniform_belief(p)
-b = SparseCat([:hungry, :full], [0.4, 0.6])
-updater(solp)
-updater(solr)
-update(updater(solp),b,:nothing,:crying)
-update(updater(solr),b,:nothing,:crying)
-sim = RolloutSimulator()
-
-
-using RPOMDPModels, RPOMDPToolbox
-rng = MersenneTwister(120938)
-p = BabyPOMDP()
-generate_s(p, :full, :nothing, rng)
+#
+# sim = RolloutSimulator(max_steps = 1000)
+# rbu = RobustUpdater(rp, solr.alphas)
+# updater(solp)
+# updater(solr)
+# simulate(sim, rp, solr, rbu)
+#
+# m = 1000
+# v = [simulate(sim,p,solp,DiscreteUpdater(p)) for i = 1:m]
+# # using Plots
+# plot(v)
+# mean(v)
+#
+#
+# uniform_belief(p)
+# b = SparseCat([:hungry, :full], [0.4, 0.6])
+# updater(solp)
+# updater(solr)
+# update(updater(solp),b,:nothing,:crying)
+# update(updater(solr),b,:nothing,:crying)
+#
