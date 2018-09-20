@@ -76,6 +76,3 @@ TOL = 1e-6
     @test simulate(sim, rp, solrp, rpbu) ≈ -48.60001793571622 atol = 1
     @test simulate(sim, rip, solrip, ripbu) ≈ 4.908130152129587 atol = 1
 end # testset
-
-update(updater(solp),b,:nothing,:crying).b[1]
-update(updater(solrp),b,:nothing,:crying).b[1]
