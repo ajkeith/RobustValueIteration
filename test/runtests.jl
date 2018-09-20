@@ -51,14 +51,19 @@ TOL = 1e-6
     rp = BabyRPOMDP()
     rip = BabyRIPOMDP()
     solver = PBVISolver()
-    solp = solve(solver, p)
-    solip = solve(solver, ip)
-    solrp = solve(solver, rp)
-    solrip = solve(solver, rip)
+    solp = PBVI.solve(solver, p)
+    solip = PBVI.solve(solver, ip)
+    solrp = PBVI.solve(solver, rp)
+    solrip = PBVI.solve(solver, rip)
     @test solp.action_map == [:feed, :nothing, :nothing]
     @test solip.action_map == [:feed, :feed, :nothing, :feed]
     @test solrp.action_map == [:feed, :nothing, :nothing]
     @test solrip.action_map == [:feed, :feed, :feed, :feed, :feed]
+
+    # beleif updates
+    b = SparseCat([:hungry, :full], [0.4, 0.6])
+    @test update(updater(solp),b,:nothing,:crying).b[1] ≈ 0.821428571428 atol = 1e-6
+    @test update(updater(solrp),b,:nothing,:crying).b[1] ≈ 0.852364579 atol = 1e-6
 
     # simulate
     sim = RolloutSimulator(max_steps = 1000)
@@ -66,29 +71,11 @@ TOL = 1e-6
     ipbu = updater(solip)
     rpbu = updater(solrp)
     ripbu = updater(solrip)
-    @test simulate(sim, p, solp, pbu) ≈ -25.830215565382 atol = 1
-    @test simulate(sim, ip, solip, ipbu) ≈ -25.830215565382 atol = 1
-    @test simulate(sim, rp, solrp, rpbu) ≈ -25.830215565382 atol = 1
-    @test simulate(sim, rip, solrip, ripbu) ≈ -25.830215565382 atol = 1
+    @test simulate(sim, p, solp, pbu) ≈ -20.29439154412 atol = 1
+    @test simulate(sim, ip, solip, ipbu) ≈ 10.0 atol = 1
+    @test simulate(sim, rp, solrp, rpbu) ≈ -48.60001793571622 atol = 1
+    @test simulate(sim, rip, solrip, ripbu) ≈ 4.908130152129587 atol = 1
 end # testset
-#
-# sim = RolloutSimulator(max_steps = 1000)
-# rbu = RobustUpdater(rp, solr.alphas)
-# updater(solp)
-# updater(solr)
-# simulate(sim, rp, solr, rbu)
-#
-# m = 1000
-# v = [simulate(sim,p,solp,DiscreteUpdater(p)) for i = 1:m]
-# # using Plots
-# plot(v)
-# mean(v)
-#
-#
-# uniform_belief(p)
-# b = SparseCat([:hungry, :full], [0.4, 0.6])
-# updater(solp)
-# updater(solr)
-# update(updater(solp),b,:nothing,:crying)
-# update(updater(solr),b,:nothing,:crying)
-#
+
+update(updater(solp),b,:nothing,:crying).b[1]
+update(updater(solrp),b,:nothing,:crying).b[1]
