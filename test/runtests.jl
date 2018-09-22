@@ -76,3 +76,48 @@ TOL = 1e-6
     @test simulate(sim, rp, solrp, rpbu) ≈ -48.60001793571622 atol = 1
     @test simulate(sim, rip, solrip, ripbu) ≈ 4.908130152129587 atol = 1
 end # testset
+
+# using Base.Test
+# using BenchmarkTools
+# using RPOMDPModels, RPOMDPToolbox
+# using RobustValueIteration
+# const PBVI = RobustValueIteration
+# TOL = 1e-6
+#
+# srand(429)
+# bset = [[0, 1.0], [0.2, 0.8], [0.4, 0.6], [0.6,0.4], [0.8,0.2], [1.0,0.0]]
+# p = BabyPOMDP()
+# ip = BabyIPOMDP()
+# rp = BabyRPOMDP()
+# rip = BabyRIPOMDP()
+# solver = PBVISolver()
+# solp = PBVI.solve(solver, p)
+# solip = PBVI.solve(solver, ip)
+# solrp = PBVI.solve(solver, rp)
+# solrip = PBVI.solve(solver, rip)
+# @test solp.action_map == [:feed, :nothing, :nothing]
+# @test solip.action_map == [:feed, :feed, :nothing, :feed]
+# @test solrp.action_map == [:feed, :nothing, :nothing]
+# @test solrip.action_map == [:feed, :feed, :feed, :feed, :feed]
+#
+# # beleif updates
+# b = SparseCat([:hungry, :full], [0.4, 0.6])
+# @test update(updater(solp),b,:nothing,:crying).b[1] ≈ 0.821428571428 atol = 1e-6
+# @test update(updater(solrp),b,:nothing,:crying).b[1] ≈ 0.852364579 atol = 1e-6
+#
+# # simulate
+# sim = RolloutSimulator(max_steps = 1000)
+# pbu = updater(solp)
+# ipbu = updater(solip)
+# rpbu = updater(solrp)
+# ripbu = updater(solrip)
+# simulate(sim, p, solp, pbu)
+# simulate(sim, ip, solip, ipbu)
+# @btime simulate(sim, rp, solrp, rpbu)
+# @btime simulate(sim, rip, solrip, ripbu)
+#
+#
+# @test simulate(sim, p, solp, pbu) ≈ -20.29439154412 atol = 1
+# @test simulate(sim, ip, solip, ipbu) ≈ 10.0 atol = 1
+# @test simulate(sim, rp, solrp, rpbu) ≈ -48.60001793571622 atol = 1
+# @test simulate(sim, rip, solrip, ripbu) ≈ 4.908130152129587 atol = 1

@@ -93,11 +93,14 @@ function findαz(zind::Int, u::Vector{Float64}, b::Vector{Float64}, p::Array{Flo
     ns = size(p, 1)
     for α in alphavecs
         s = sum(b[sind] * p[:,zind,sind]' * α for sind = 1:ns)
-        if u[zind] ≈ sum(b[sind] * p[:,zind,sind]' * α for sind = 1:ns) atol = TOL
+        # @show u[zind]
+        # @show sum(b[sind] * p[:,zind,sind]' * α for sind = 1:ns)
+        if isapprox(u[zind], sum(b[sind] * p[:,zind,sind]' * α for sind = 1:ns), atol = TOL)
             αz = α
             break
         end
     end
+    # @show αz
     αz
 end
 
