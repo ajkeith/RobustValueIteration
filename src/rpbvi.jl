@@ -133,18 +133,18 @@ end
 
 Robust point-based dynamic programming backup value of `αset` for `beliefset` in `rpomdp`.
 """
-function robustdpupdate(Vold::Set{AlphaVec}, beliefset::Vector{Vector{Float64}}, rp::Union{RPOMDP,RIPOMDP})
-    alphaset = Set([avec.alpha for avec in Vold])
-    Vnew = Set{AlphaVec}()
+function robustdpupdate(Vold::Vector{AlphaVec}, beliefset::Vector{Vector{Float64}}, rp::Union{RPOMDP,RIPOMDP})
+    alphaset = [avec.alpha for avec in Vold]
+    Vnew = Vector{AlphaVec}(size(beliefset, 1))
     # bcount = 0
-    for b in beliefset
+    for (bi, b) in enumerate(beliefset)
         Vbset = Set{AlphaVec}()
         for a in ordered_actions(rp)
-            u, pstar = minutil(rp, b, a, collect(alphaset))
+            u, pstar = minutil(rp, b, a, alphaset)
             αz = Array{Array{Float64}}(n_observations(rp))
             αstar = Vector{Float64}(n_states(rp))
             for (zind, z) in enumerate(ordered_observations(rp))
-                αz[zind] = findαz(zind, u, b, pstar, collect(alphaset))
+                αz[zind] = findαz(zind, u, b, pstar, alphaset)
             end
             for (sind, s) in enumerate(ordered_states(rp))
                 αstar[sind] = findαstar(rp, b, s, a, pstar, αz)
@@ -162,7 +162,7 @@ function robustdpupdate(Vold::Set{AlphaVec}, beliefset::Vector{Vector{Float64}},
         # bcount += 1
         # @show bcount
         # @show αmax
-        Vnew = push!(Vnew, αmax)
+        Vnew[bi] = αmax
     end
     Vnew
 end
@@ -172,13 +172,13 @@ end
 
 Point-based dynamic programming backup value of `αset` for `beliefset` in `pomdp`.
 """
-function dpupdate(Vold::Set{AlphaVec}, beliefset::Vector{Vector{Float64}}, prob::Union{POMDP,IPOMDP})
+function dpupdate(Vold::Vector{AlphaVec}, beliefset::Vector{Vector{Float64}}, prob::Union{POMDP,IPOMDP})
     alphaset = Set([avec.alpha for avec in Vold])
-    Vnew = Set{AlphaVec}()
+    Vnew = Vector{AlphaVec}(size(beliefset, 1))
     p = dynamics(prob)
     ns = n_states(prob)
     # bcount = 0
-    for b in beliefset
+    for (bi, b) in enumerate(beliefset)
         Vbset = Set{AlphaVec}()
         for (aind,a) in enumerate(ordered_actions(prob))
             αz = Array{Array{Float64}}(n_observations(prob))
@@ -210,7 +210,7 @@ function dpupdate(Vold::Set{AlphaVec}, beliefset::Vector{Vector{Float64}}, prob:
         # bcount += 1
         # @show bcount
         # @show αmax
-        Vnew = push!(Vnew, αmax)
+        Vnew[bi] = αmax
     end
     Vnew
 end
@@ -221,42 +221,13 @@ end
 Maximum difference between new alpha vectors `Vnew` and old alpha vectors `Vold` in `pomdp`.
 """
 function diffvalue(Vnew::Vector{AlphaVec}, Vold::Vector{AlphaVec}, pomdp::Union{POMDP,IPOMDP,RPOMDP,RIPOMDP})
-    ns = n_states(pomdp) # number of states in alpha vector
-    S = ordered_states(pomdp)
-    A = ordered_actions(pomdp)
-    Anew = [avec.alpha for avec in Vnew]
-    Aold = [avec.alpha for avec in Vold]
-    dmax = -Inf # max difference
-    for avecnew in Anew
-        L = Model(solver = ClpSolver())
-        @variable(L, x[1:ns])
-        @variable(L, t)
-        @objective(L, :Max, t)
-        @constraint(L, x .>= 0)
-        @constraint(L, x .<= 1)
-        @constraint(L, sum(x) == 1)
-        for avecold in Aold
-            @constraint(L, (avecnew - avecold)' * x >= t)
-        end
-        sol = JuMP.solve(L)
-        dmax = max(dmax, getobjectivevalue(L))
-    end
-    # rmin = minimum(reward(pomdp,s,a) for s in S, a in A) # minimum reward
-    rmin = -1 # force second check since belief rewards have a more expensive min
-    if rmin < 0 # if negative rewards, find max difference from old to new
-        for avecold in Aold
-            L = Model(solver = ClpSolver())
-            @variable(L, x[1:ns])
-            @variable(L, t)
-            @objective(L, :Max, t)
-            @constraint(L, x .>= 0)
-            @constraint(L, x .<= 1)
-            @constraint(L, sum(x) == 1)
-            for avecnew in Anew
-                @constraint(L, (avecold - avecnew)' * x >= t)
-            end
-            sol = JuMP.solve(L)
-            dmax = max(dmax, getobjectivevalue(L))
+    nv = length(Vnew)
+    ns = n_states(pomdp)
+    dmax = -Inf
+    for bi = 1:nv
+        for si = 1:ns
+            diff = abs(Vnew[bi].alpha[si] - Vold[bi].alpha[si])
+            dmax = max(dmax, diff)
         end
     end
     dmax
@@ -273,15 +244,15 @@ function solve(solver::RPBVISolver, prob::Union{RPOMDP,RIPOMDP})
     replimit = solver.max_iterations
     policy = create_policy(solver, prob)
     avecs = [AlphaVec(policy.alphas[i], policy.action_map[i]) for i in 1:length(policy.action_map)]
-    Vold = Set([AlphaVec(zeros(n_states(prob)), ordered_actions(prob)[1])])
-    Vnew = Set{AlphaVec}()
+    Vold = fill(AlphaVec(zeros(n_states(prob)), ordered_actions(prob)[1]), length(solver.beliefpoints))
+    Vnew = Vector{AlphaVec}()
     del = Inf
     reps = 0
     while del > ϵ && reps < replimit
         reps += 1
         Vnew = robustdpupdate(Vold, solver.beliefpoints, prob)
-        del = diffvalue(collect(Vnew), collect(Vold), prob)
-        Vold = Vnew
+        del = diffvalue(Vnew, Vold, prob)
+        Vold = copy(Vnew)
     end
     alphas_new = [v.alpha for v in Vnew]
     actions_new = [v.action for v in Vnew]
@@ -295,15 +266,15 @@ function solve(solver::RPBVISolver, prob::Union{POMDP,IPOMDP})
     replimit = solver.max_iterations
     policy = create_policy(solver, prob)
     avecs = [AlphaVec(policy.alphas[i], policy.action_map[i]) for i in 1:length(policy.action_map)]
-    Vold = Set([AlphaVec(zeros(n_states(prob)), ordered_actions(prob)[1])])
-    Vnew = Set{AlphaVec}()
+    Vold = fill(AlphaVec(zeros(n_states(prob)), ordered_actions(prob)[1]), length(solver.beliefpoints))
+    Vnew = Vector{AlphaVec}()
     del = Inf
     reps = 0
     while del > ϵ && reps < replimit
         reps += 1
         Vnew = dpupdate(Vold, solver.beliefpoints, prob)
-        del = diffvalue(collect(Vnew), collect(Vold), prob)
-        Vold = Vnew
+        del = diffvalue(Vnew, Vold, prob)
+        Vold = copy(Vnew)
     end
     alphas_new = [v.alpha for v in Vnew]
     actions_new = [v.action for v in Vnew]
@@ -311,4 +282,4 @@ function solve(solver::RPBVISolver, prob::Union{POMDP,IPOMDP})
     return policy
 end
 
-policyvalue(policy::AlphaVectorPolicy, b::Vector{Float64}) = maximum(dot(policy.alphas[i],b) for i in 1:length(policy.alphas))
+policyvalue(policy::AlphaVectorPolicy, b::Vector{Float64}) = maximum(dot(policy.alphas[i], b) for i in 1:length(policy.alphas))

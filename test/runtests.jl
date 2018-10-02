@@ -1,24 +1,34 @@
 using Base.Test
 using RPOMDPModels, RPOMDPToolbox
 using RobustValueIteration
-const PBVI = RobustValueIteration
+const RPBVI = RobustValueIteration
 TOL = 1e-6
 
 @testset "Robust point-based value iteration" begin
+    # value function max difference
+    rp = BabyRPOMDP()
+    alphavecs = [RPBVI.AlphaVec([2.0, 4.0], true),
+                    RPBVI.AlphaVec([1.0, 5.0], :nothing),
+                    RPBVI.AlphaVec([3.0, 3.0], :nothing),
+                    RPBVI.AlphaVec([4.0, 2.0], :nothing),
+                    RPBVI.AlphaVec([4.0, 3.0], :feed),
+                    RPBVI.AlphaVec([5.0, 1.0], :nothing)]
+    av2 = [RPBVI.AlphaVec([2.0, 4.0], true),
+                    RPBVI.AlphaVec([1.1, 5.0], :nothing),
+                    RPBVI.AlphaVec([3.0, 3.0], :nothing),
+                    RPBVI.AlphaVec([4.0, 2.0], :nothing),
+                    RPBVI.AlphaVec([4.0, 3.0], :feed),
+                    RPBVI.AlphaVec([5.0, 0.9], :nothing)]
+    @test RPBVI.diffvalue(alphavecs, av2, rp) ≈ 0.1 atol = TOL
+
     # minimum probability distribution (minutil)
     srand(429)
     bset = [[0, 1.0], [0.2, 0.8], [0.4, 0.6], [0.6,0.4], [0.8,0.2], [1.0,0.0]]
-    alphavecs = Set([PBVI.AlphaVec([2.0, 4.0], true),
-                    PBVI.AlphaVec([1.0, 5.0], false),
-                    PBVI.AlphaVec([3.0, 3.0], false),
-                    PBVI.AlphaVec([4.0, 2.0], false),
-                    PBVI.AlphaVec([4.0, 3.0], true),
-                    PBVI.AlphaVec([5.0, 1.0], false)])
     alphas = [avec.alpha for avec in alphavecs]
     rip = BabyRIPOMDP()
     b = bset[2]
     a = :feed
-    u, pstar = PBVI.minutil(rip, b, a, alphas)
+    u, pstar = RPBVI.minutil(rip, b, a, alphas)
     @test sum(u) ≈ 4.8925 atol = TOL
     @test all(isapprox.(sum(pstar, (1,2)), 1.0, atol = TOL)) # p contains distributions
 
@@ -27,21 +37,21 @@ TOL = 1e-6
     nz = n_observations(rip)
     αz = Array{Array{Float64}}(nz)
     for zind = 1:nz
-        αz[zind] = PBVI.findαz(zind, u, b, pstar, alphas)
+        αz[zind] = RPBVI.findαz(zind, u, b, pstar, alphas)
     end
     @test αz[1] == [1.0, 5.0]
 
     # find α*
     s = :hungry
     a = :nothing
-    αstar = PBVI.findαstar(rip, b, s, a, pstar, αz)
+    αstar = RPBVI.findαstar(rip, b, s, a, pstar, αz)
     @test αstar ≈ 3.40325 atol = TOL
 
     # robust point based dp backup
     srand(257349)
-    αset = PBVI.robustdpupdate(alphavecs, bset, rip)
-    @test length(αset) == 5
-    @test pop!(αset).alpha[1] ≈ 4.60325 atol = TOL
+    αset = RPBVI.robustdpupdate(alphavecs, bset, rip)
+    @test length(αset) == 6
+    @test αset[1].alpha[1] ≈ 3.40325 atol = TOL
 
     # solver
     srand(429)
@@ -51,19 +61,19 @@ TOL = 1e-6
     rp = BabyRPOMDP()
     rip = BabyRIPOMDP()
     solver = RPBVISolver()
-    solp = PBVI.solve(solver, p)
-    solip = PBVI.solve(solver, ip)
-    solrp = PBVI.solve(solver, rp)
-    solrip = PBVI.solve(solver, rip)
-    @test solp.action_map == [:feed, :nothing, :nothing]
-    @test solip.action_map == [:feed, :feed, :nothing, :feed]
-    @test solrp.action_map == [:feed, :nothing, :nothing]
-    @test solrip.action_map == [:feed, :feed, :feed, :feed, :feed]
+    solp = RPBVI.solve(solver, p)
+    solip = RPBVI.solve(solver, ip)
+    solrp = RPBVI.solve(solver, rp)
+    solrip = RPBVI.solve(solver, rip)
+    @test solp.action_map == [:nothing, :nothing, :feed, :feed, :feed, :feed]
+    @test solip.action_map == [:feed, :feed, :feed, :feed, :feed, :nothing]
+    @test solrp.action_map == [:nothing, :nothing, :feed, :feed, :feed, :feed]
+    @test solrip.action_map == [:feed, :feed, :feed, :feed, :feed, :nothing]
 
     # beleif updates
     b = SparseCat([:hungry, :full], [0.4, 0.6])
-    @test update(updater(solp),b,:nothing,:crying).b[1] ≈ 0.821428571428 atol = 1e-6
-    @test update(updater(solrp),b,:nothing,:crying).b[1] ≈ 0.852364579 atol = 1e-6
+    @test update(updater(solp),b,:nothing,:crying).b[1] ≈ 0.8363636363636364 atol = TOL
+    @test update(updater(solrp),b,:nothing,:crying).b[1] ≈ 0.8497474114178433 atol = TOL
 
     # simulate
     sim = RolloutSimulator(max_steps = 1000)
@@ -76,48 +86,3 @@ TOL = 1e-6
     @test simulate(sim, rp, solrp, rpbu) ≈ -48.60001793571622 atol = 1
     @test simulate(sim, rip, solrip, ripbu) ≈ 4.908130152129587 atol = 1
 end # testset
-
-# using Base.Test
-# using BenchmarkTools
-# using RPOMDPModels, RPOMDPToolbox
-# using RobustValueIteration
-# const PBVI = RobustValueIteration
-# TOL = 1e-6
-#
-# srand(429)
-# bset = [[0, 1.0], [0.2, 0.8], [0.4, 0.6], [0.6,0.4], [0.8,0.2], [1.0,0.0]]
-# p = BabyPOMDP()
-# ip = BabyIPOMDP()
-# rp = BabyRPOMDP()
-# rip = BabyRIPOMDP()
-# solver = RPBVISolver()
-# solp = PBVI.solve(solver, p)
-# solip = PBVI.solve(solver, ip)
-# solrp = PBVI.solve(solver, rp)
-# solrip = PBVI.solve(solver, rip)
-# @test solp.action_map == [:feed, :nothing, :nothing]
-# @test solip.action_map == [:feed, :feed, :nothing, :feed]
-# @test solrp.action_map == [:feed, :nothing, :nothing]
-# @test solrip.action_map == [:feed, :feed, :feed, :feed, :feed]
-#
-# # beleif updates
-# b = SparseCat([:hungry, :full], [0.4, 0.6])
-# @test update(updater(solp),b,:nothing,:crying).b[1] ≈ 0.821428571428 atol = 1e-6
-# @test update(updater(solrp),b,:nothing,:crying).b[1] ≈ 0.852364579 atol = 1e-6
-#
-# # simulate
-# sim = RolloutSimulator(max_steps = 1000)
-# pbu = updater(solp)
-# ipbu = updater(solip)
-# rpbu = updater(solrp)
-# ripbu = updater(solrip)
-# simulate(sim, p, solp, pbu)
-# simulate(sim, ip, solip, ipbu)
-# @btime simulate(sim, rp, solrp, rpbu)
-# @btime simulate(sim, rip, solrip, ripbu)
-#
-#
-# @test simulate(sim, p, solp, pbu) ≈ -20.29439154412 atol = 1
-# @test simulate(sim, ip, solip, ipbu) ≈ 10.0 atol = 1
-# @test simulate(sim, rp, solrp, rpbu) ≈ -48.60001793571622 atol = 1
-# @test simulate(sim, rip, solrip, ripbu) ≈ 4.908130152129587 atol = 1
