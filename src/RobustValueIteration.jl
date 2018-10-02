@@ -6,10 +6,10 @@ using JuMP, Clp
 import Base: ==, hash
 
 export
-    PBVISolver,
+    RPBVISolver,
     solve,
     policyvalue
 
-include("pbvi.jl")
+include("rpbvi.jl")
 
 end # module

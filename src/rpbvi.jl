@@ -1,21 +1,21 @@
 """
-    PBVISolver <: Solver
+    RPBVISolver <: Solver
 
 POMDP solver type using the point-based value iteration algorithm.
 """
-mutable struct PBVISolver <: Solver
+mutable struct RPBVISolver <: Solver
     beliefpoints::Vector{Vector{Float64}}
     max_iterations::Int64
     tolerance::Float64
 end
 
 """
-    PBVISolver(; max_iterations, tolerance)
+    RPBVISolver(; max_iterations, tolerance)
 
 Initialize a point-based value iteration solver with the `max_iterations` limit and desired `tolerance`.
 """
-function PBVISolver(;beliefpoints::Vector{Vector{Float64}}=[[0, 1.0], [0.2, 0.8], [0.4, 0.6], [0.6,0.4], [0.8,0.2], [1.0,0.0]], max_iterations::Int64=10, tolerance::Float64=1e-3)
-    return PBVISolver(beliefpoints, max_iterations, tolerance)
+function RPBVISolver(;beliefpoints::Vector{Vector{Float64}}=[[0, 1.0], [0.2, 0.8], [0.4, 0.6], [0.6,0.4], [0.8,0.2], [1.0,0.0]], max_iterations::Int64=10, tolerance::Float64=1e-3)
+    return RPBVISolver(beliefpoints, max_iterations, tolerance)
 end
 
 """
@@ -40,11 +40,11 @@ AlphaVec() = AlphaVec([0.0], 0)
 Base.hash(a::AlphaVec, h::UInt) = hash(a.alpha, hash(a.action, h))
 
 """
-    create_policy(prune_solver, pomdp)
+    create_policy(solver, pomdp)
 
-Create AlphaVectorPolicy for `prune_solver` using immediate rewards from `pomdp`.
+Create AlphaVectorPolicy for `solver` using immediate rewards from `pomdp`.
 """
-function create_policy(solver::PBVISolver, pomdp::Union{POMDP,RPOMDP})
+function create_policy(solver::RPBVISolver, pomdp::Union{POMDP,RPOMDP})
     ns = n_states(pomdp)
     na = n_actions(pomdp)
     S = ordered_states(pomdp)
@@ -53,7 +53,7 @@ function create_policy(solver::PBVISolver, pomdp::Union{POMDP,RPOMDP})
     AlphaVectorPolicy(pomdp, alphas)
 end
 
-function create_policy(solver::PBVISolver, pomdp::Union{IPOMDP,RIPOMDP})
+function create_policy(solver::RPBVISolver, pomdp::Union{IPOMDP,RIPOMDP})
     ns = n_states(pomdp)
     na = n_actions(pomdp)
     S = ordered_states(pomdp)
@@ -263,11 +263,11 @@ function diffvalue(Vnew::Vector{AlphaVec}, Vold::Vector{AlphaVec}, pomdp::Union{
 end
 
 """
-    solve(solver::PBVISolver, rpomdp)
+    solve(solver::RPBVISolver, rpomdp)
 
 AlphaVectorPolicy for `pomdp` caluclated by the incremental pruning algorithm.
 """
-function solve(solver::PBVISolver, prob::Union{RPOMDP,RIPOMDP})
+function solve(solver::RPBVISolver, prob::Union{RPOMDP,RIPOMDP})
     # println("Solver started...")
     ϵ = solver.tolerance
     replimit = solver.max_iterations
@@ -289,7 +289,7 @@ function solve(solver::PBVISolver, prob::Union{RPOMDP,RIPOMDP})
     return policy
 end
 
-function solve(solver::PBVISolver, prob::Union{POMDP,IPOMDP})
+function solve(solver::RPBVISolver, prob::Union{POMDP,IPOMDP})
     # println("Solver started...")
     ϵ = solver.tolerance
     replimit = solver.max_iterations
