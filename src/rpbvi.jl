@@ -137,7 +137,7 @@ function robustdpupdate(Vold::Vector{AlphaVec}, beliefset::Vector{Vector{Float64
     alphaset = [avec.alpha for avec in Vold]
     Vnew = Vector{AlphaVec}(size(beliefset, 1))
     # bcount = 0
-    for (bi, b) in enumerate(beliefset)
+    @showprogress 1 "Inner loop..." for (bi, b) in enumerate(beliefset)
         Vbset = Set{AlphaVec}()
         for a in ordered_actions(rp)
             u, pstar = minutil(rp, b, a, alphaset)
@@ -178,7 +178,7 @@ function dpupdate(Vold::Vector{AlphaVec}, beliefset::Vector{Vector{Float64}}, pr
     p = dynamics(prob)
     ns = n_states(prob)
     # bcount = 0
-    for (bi, b) in enumerate(beliefset)
+    @showprogress 1 "Inner loop..." for (bi, b) in enumerate(beliefset)
         Vbset = Set{AlphaVec}()
         for (aind,a) in enumerate(ordered_actions(prob))
             αz = Array{Array{Float64}}(n_observations(prob))
@@ -253,6 +253,8 @@ function solve(solver::RPBVISolver, prob::Union{RPOMDP,RIPOMDP})
         Vnew = robustdpupdate(Vold, solver.beliefpoints, prob)
         del = diffvalue(Vnew, Vold, prob)
         Vold = copy(Vnew)
+        @show reps
+        @show del
     end
     alphas_new = [v.alpha for v in Vnew]
     actions_new = [v.action for v in Vnew]
@@ -275,6 +277,8 @@ function solve(solver::RPBVISolver, prob::Union{POMDP,IPOMDP})
         Vnew = dpupdate(Vold, solver.beliefpoints, prob)
         del = diffvalue(Vnew, Vold, prob)
         Vold = copy(Vnew)
+        @show reps
+        @show del
     end
     alphas_new = [v.alpha for v in Vnew]
     actions_new = [v.action for v in Vnew]
