@@ -237,7 +237,7 @@ end
 
 AlphaVectorPolicy for `pomdp` caluclated by the incremental pruning algorithm.
 """
-function solve(solver::RPBVISolver, prob::Union{RPOMDP,RIPOMDP})
+function solve(solver::RPBVISolver, prob::Union{RPOMDP,RIPOMDP}; verbose::Bool=false)
     # println("Solver started...")
     ϵ = solver.tolerance
     iterlimit = solver.max_iterations
@@ -252,8 +252,8 @@ function solve(solver::RPBVISolver, prob::Union{RPOMDP,RIPOMDP})
         Vnew = robustdpupdate(Vold, solver.beliefpoints, prob)
         del = diffvalue(Vnew, Vold, prob)
         Vold = copy(Vnew)
-        @show iter
-        @show del
+        verbose && @show iter
+        verbose && @show del
     end
     alphas_new = [v.alpha for v in Vnew]
     actions_new = [v.action for v in Vnew]
@@ -261,7 +261,7 @@ function solve(solver::RPBVISolver, prob::Union{RPOMDP,RIPOMDP})
     return policy
 end
 
-function solve(solver::RPBVISolver, prob::Union{POMDP,IPOMDP})
+function solve(solver::RPBVISolver, prob::Union{POMDP,IPOMDP}; verbose::Bool=false)
     # println("Solver started...")
     ϵ = solver.tolerance
     iterlimit = solver.max_iterations
@@ -276,8 +276,8 @@ function solve(solver::RPBVISolver, prob::Union{POMDP,IPOMDP})
         Vnew = dpupdate(Vold, solver.beliefpoints, prob)
         del = diffvalue(Vnew, Vold, prob)
         Vold = copy(Vnew)
-        @show iter
-        @show del
+        verbose && @show iter
+        verbose && @show del
     end
     alphas_new = [v.alpha for v in Vnew]
     actions_new = [v.action for v in Vnew]
