@@ -177,7 +177,6 @@ function dpupdate(Vold::Vector{AlphaVec}, beliefset::Vector{Vector{Float64}}, pr
     Vnew = Vector{AlphaVec}(size(beliefset, 1))
     p = dynamics(prob)
     ns = n_states(prob)
-    # bcount = 0
     @showprogress 1 "Inner loop..." for (bi, b) in enumerate(beliefset)
         Vbset = Set{AlphaVec}()
         for (aind,a) in enumerate(ordered_actions(prob))
@@ -241,19 +240,19 @@ AlphaVectorPolicy for `pomdp` caluclated by the incremental pruning algorithm.
 function solve(solver::RPBVISolver, prob::Union{RPOMDP,RIPOMDP})
     # println("Solver started...")
     ϵ = solver.tolerance
-    replimit = solver.max_iterations
+    iterlimit = solver.max_iterations
     policy = create_policy(solver, prob)
     avecs = [AlphaVec(policy.alphas[i], policy.action_map[i]) for i in 1:length(policy.action_map)]
     Vold = fill(AlphaVec(zeros(n_states(prob)), ordered_actions(prob)[1]), length(solver.beliefpoints))
     Vnew = Vector{AlphaVec}()
     del = Inf
-    reps = 0
-    while del > ϵ && reps < replimit
-        reps += 1
+    iter = 0
+    while del > ϵ && iter < iterlimit
+        iter += 1
         Vnew = robustdpupdate(Vold, solver.beliefpoints, prob)
         del = diffvalue(Vnew, Vold, prob)
         Vold = copy(Vnew)
-        @show reps
+        @show iter
         @show del
     end
     alphas_new = [v.alpha for v in Vnew]
@@ -265,19 +264,19 @@ end
 function solve(solver::RPBVISolver, prob::Union{POMDP,IPOMDP})
     # println("Solver started...")
     ϵ = solver.tolerance
-    replimit = solver.max_iterations
+    iterlimit = solver.max_iterations
     policy = create_policy(solver, prob)
     avecs = [AlphaVec(policy.alphas[i], policy.action_map[i]) for i in 1:length(policy.action_map)]
     Vold = fill(AlphaVec(zeros(n_states(prob)), ordered_actions(prob)[1]), length(solver.beliefpoints))
     Vnew = Vector{AlphaVec}()
     del = Inf
-    reps = 0
-    while del > ϵ && reps < replimit
-        reps += 1
+    iter = 0
+    while del > ϵ && iter < iterlimit
+        iter += 1
         Vnew = dpupdate(Vold, solver.beliefpoints, prob)
         del = diffvalue(Vnew, Vold, prob)
         Vold = copy(Vnew)
-        @show reps
+        @show iter
         @show del
     end
     alphas_new = [v.alpha for v in Vnew]
