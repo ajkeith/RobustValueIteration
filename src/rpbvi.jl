@@ -88,7 +88,7 @@ function minutil(prob::Union{RPOMDP,RIPOMDP}, b::Vector{Float64}, a, alphavecs::
 end
 
 function findαz(zind::Int, u::Vector{Float64}, b::Vector{Float64}, p::Array{Float64}, alphavecs::Vector{Vector{Float64}})
-    TOL = 1e-9
+    TOL = 1e-6
     αz = nothing
     ns = size(p, 1)
     for α in alphavecs
