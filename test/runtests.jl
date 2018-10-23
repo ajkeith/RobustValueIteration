@@ -33,7 +33,6 @@ TOL = 1e-6
     @test all(isapprox.(sum(pstar, (1,2)), 1.0, atol = TOL)) # p contains distributions
 
     # find αz that optimizes Eq. (5)
-    # This is a way of making a non-linear program into two linear programs?
     nz = n_observations(rip)
     αz = Array{Array{Float64}}(nz)
     for zind = 1:nz
@@ -81,8 +80,17 @@ TOL = 1e-6
     ipbu = updater(solip)
     rpbu = updater(solrp)
     ripbu = updater(solrip)
-    @test simulate(sim, p, solp, pbu) ≈ -20.29439154412 atol = 1
-    @test simulate(sim, ip, solip, ipbu) ≈ 10.0 atol = 1
-    @test simulate(sim, rp, solrp, rpbu) ≈ -48.60001793571622 atol = 1
-    @test simulate(sim, rip, solrip, ripbu) ≈ 4.908130152129587 atol = 1
+    @test simulate(sim, p, solp, pbu)[1] ≈ -20.29439154412 atol = 1
+    @test simulate(sim, ip, solip, ipbu)[1] ≈ 10.0 atol = 1
+    @test simulate(sim, rp, solrp, rpbu)[1] ≈ -48.60001793571622 atol = 1
+    @test simulate(sim, rip, solrip, ripbu)[1] ≈ 4.908130152129587 atol = 1
 end # testset
+
+@testset "POMDP to RPOMDP comparison" begin
+    srand(8473272)
+    p1 = TigerPOMDP()
+    p2 = Baby2POMDP()
+    p1r = TigerRPOMDP()
+    p2r = BabyRPOMDP()
+    true 
+end
