@@ -22,6 +22,7 @@ TOL = 1e-6
     @test RPBVI.diffvalue(alphavecs, av2, rp) ≈ 0.1 atol = TOL
 
     # minimum probability distribution (minutil)
+    ################### TO DO: CHECK ORACLE ######################
     srand(429)
     bset = [[0, 1.0], [0.2, 0.8], [0.4, 0.6], [0.6,0.4], [0.8,0.2], [1.0,0.0]]
     alphas = [avec.alpha for avec in alphavecs]
@@ -33,6 +34,7 @@ TOL = 1e-6
     @test all(isapprox.(sum(pstar, (1,2)), 1.0, atol = TOL)) # p contains distributions
 
     # find αz that optimizes Eq. (5)
+    ################### TO DO: CHECK ORACLE ######################
     nz = n_observations(rip)
     αz = Array{Array{Float64}}(nz)
     for zind = 1:nz
@@ -41,18 +43,21 @@ TOL = 1e-6
     @test αz[1] == [1.0, 5.0]
 
     # find α*
+    ################### TO DO: CHECK ORACLE ######################
     s = :hungry
     a = :nothing
     αstar = RPBVI.findαstar(rip, b, s, a, pstar, αz)
     @test αstar ≈ 3.40325 atol = TOL
 
     # robust point based dp backup
+    ################### TO DO: CHECK ORACLE ######################
     srand(257349)
     αset = RPBVI.robustdpupdate(alphavecs, bset, rip)
     @test length(αset) == 6
     @test αset[1].alpha[1] ≈ 3.40325 atol = TOL
 
     # solver
+    ################### TO DO: CHECK ORACLE (for info)######################
     srand(429)
     bset = [[0, 1.0], [0.2, 0.8], [0.4, 0.6], [0.6,0.4], [0.8,0.2], [1.0,0.0]]
     p = BabyPOMDP()
@@ -70,11 +75,13 @@ TOL = 1e-6
     @test solrip.action_map == [:feed, :feed, :feed, :feed, :feed, :nothing]
 
     # beleif updates
+    ################### TO DO: CHECK ORACLE ######################
     b = SparseCat([:hungry, :full], [0.4, 0.6])
     @test update(updater(solp),b,:nothing,:crying).b[1] ≈ 0.8363636363636364 atol = TOL
     @test update(updater(solrp),b,:nothing,:crying).b[1] ≈ 0.8497474114178433 atol = TOL
 
     # simulate
+    ################### TO DO: CHECK ORACLE ######################
     sim = RolloutSimulator(max_steps = 1000)
     pbu = updater(solp)
     ipbu = updater(solip)
@@ -86,11 +93,37 @@ TOL = 1e-6
     @test simulate(sim, rip, solrip, ripbu)[1] ≈ 4.908130152129587 atol = 1
 end # testset
 
-@testset "POMDP to RPOMDP comparison" begin
+# Oracle values for ambiguity = 0 are from SARSOP
+# Oracle values for ambiguity = 0.001, 0.1 from RobustInfoPOMDP/correctness_test.jl
+# Plots make sense
+@testset "SARSOP Comparison: RPOMDP" begin
+    vtol = 0.1
     srand(8473272)
-    p1 = TigerPOMDP()
-    p2 = Baby2POMDP()
-    p1r = TigerRPOMDP()
-    p2r = BabyRPOMDP()
-    true 
+    p1 = TigerPOMDP(0.95)
+    p1_001 = TigerRPOMDP(0.95, 0.001)
+    p1_1 = TigerRPOMDP(0.95, 0.1)
+    p2 = Baby2POMDP(-5.0, -10.0, 0.9)
+    p2_001 = BabyRPOMDP(-5.0, -10.0, 0.9, 0.001)
+    p2_1 = BabyRPOMDP(-5.0, -10.0, 0.9, 0.1)
+    bs = [[b, 1-b] for b in 0.0:0.05:1.0]
+    maxiter = 100
+    solver = RPBVISolver(beliefpoints = bs, max_iterations = maxiter)
+    pol1 = RPBVI.solve(solver, p1)
+    pol1_001 = RPBVI.solve(solver, p1_001)
+    pol1_1 = RPBVI.solve(solver, p1_1)
+    pol2 = RPBVI.solve(solver, p2)
+    pol2_001 = RPBVI.solve(solver, p2_001)
+    pol2_1 = RPBVI.solve(solver, p2_1)
+    val1 = value(pol1, [0.5, 0.5])
+    val1_001 = value(pol1_001, [0.5, 0.5])
+    val1_1 = value(pol1_1, [0.5, 0.5])
+    val2 = value(pol2, [0.0, 1.0])
+    val2_001 = value(pol2_001, [0.0, 1.0])
+    val2_1 = value(pol2_1, [0.0, 1.0])
+    @test val1 ≈ 19.25 atol = vtol
+    @test val1_001 ≈ 18.78 atol = vtol
+    @test val1_1 ≈ -15.55 atol = vtol
+    @test val2 ≈ -16.30 atol = vtol
+    @test val2_001 ≈ -18.49 atol = vtol
+    @test val2_1 ≈ -40.86 atol = vtol
 end
