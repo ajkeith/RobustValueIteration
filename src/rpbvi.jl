@@ -136,8 +136,8 @@ Robust point-based dynamic programming backup value of `αset` for `beliefset` i
 function robustdpupdate(Vold::Vector{AlphaVec}, beliefset::Vector{Vector{Float64}}, rp::Union{RPOMDP,RIPOMDP})
     alphaset = [avec.alpha for avec in Vold]
     Vnew = Vector{AlphaVec}(size(beliefset, 1))
-    # bcount = 0
-    @showprogress 1 "Inner loop..." for (bi, b) in enumerate(beliefset)
+    count = 1
+    @showprogress 1 "Update $count..." for (bi, b) in enumerate(beliefset)
         Vbset = Set{AlphaVec}()
         for a in ordered_actions(rp)
             u, pstar = minutil(rp, b, a, alphaset)
@@ -159,9 +159,7 @@ function robustdpupdate(Vold::Vector{AlphaVec}, beliefset::Vector{Vector{Float64
                 αmax = α
             end
         end
-        # bcount += 1
-        # @show bcount
-        # @show αmax
+        count += 1
         Vnew[bi] = αmax
     end
     Vnew
