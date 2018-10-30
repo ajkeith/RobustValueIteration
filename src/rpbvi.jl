@@ -88,7 +88,7 @@ function minutil(prob::Union{RPOMDP,RIPOMDP}, b::Vector{Float64}, a, alphavecs::
 end
 
 function findαz(zind::Int, u::Vector{Float64}, b::Vector{Float64}, p::Array{Float64}, alphavecs::Vector{Vector{Float64}})
-    TOL = 1e-5
+    TOL = 1e-6
     αz = nothing
     ns = size(p, 1)
     for α in alphavecs
@@ -245,7 +245,7 @@ function solve(solver::RPBVISolver, prob::Union{RPOMDP,RIPOMDP}; verbose::Bool=f
         Vnew = robustdpupdate(Vold, solver.beliefpoints, prob)
         del = diffvalue(Vnew, Vold, prob)
         Vold = copy(Vnew)
-        verbose && print("\riter: $iter, del: $del")
+        verbose && println("\riter: $iter, del: $del")
     end
     alphas_new = [v.alpha for v in Vnew]
     actions_new = [v.action for v in Vnew]
@@ -268,7 +268,7 @@ function solve(solver::RPBVISolver, prob::Union{POMDP,IPOMDP}; verbose::Bool=fal
         Vnew = dpupdate(Vold, solver.beliefpoints, prob)
         del = diffvalue(Vnew, Vold, prob)
         Vold = copy(Vnew)
-        verbose && print("\riter: $iter, del: $del")
+        verbose && println("\riter: $iter, del: $del")
     end
     alphas_new = [v.alpha for v in Vnew]
     actions_new = [v.action for v in Vnew]
