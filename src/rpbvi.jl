@@ -180,7 +180,6 @@ function dpupdate(Vold::Vector{AlphaVec}, beliefset::Vector{Vector{Float64}}, pr
             αstar = Vector{Float64}(n_states(prob))
             for (zind, z) in enumerate(ordered_observations(prob))
                 smax = -Inf
-                # TO DO: doublecheck definitoin of αnew
                 for αnew in collect(alphaset)
                     s = sum(b[sind] * p[:,zind,sind,aind]' * αnew for sind = 1:ns)
                     if s > smax
