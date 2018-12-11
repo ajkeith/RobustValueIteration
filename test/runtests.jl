@@ -22,7 +22,6 @@ TOL = 1e-6
     @test RPBVI.diffvalue(alphavecs, av2, rp) ≈ 0.1 atol = TOL
 
     # minimum probability distribution (minutil)
-    ################### TO DO: CHECK ORACLE ######################
     srand(429)
     bset = [[0, 1.0], [0.2, 0.8], [0.4, 0.6], [0.6,0.4], [0.8,0.2], [1.0,0.0]]
     alphas = [avec.alpha for avec in alphavecs]
@@ -34,7 +33,6 @@ TOL = 1e-6
     @test all(isapprox.(sum(pstar, (1,2)), 1.0, atol = TOL)) # p contains distributions
 
     # find αz that optimizes Eq. (5)
-    ################### TO DO: CHECK ORACLE ######################
     nz = n_observations(rip)
     αz = Array{Array{Float64}}(nz)
     for zind = 1:nz
@@ -43,21 +41,18 @@ TOL = 1e-6
     @test αz[1] == [1.0, 5.0]
 
     # find α*
-    ################### TO DO: CHECK ORACLE ######################
     s = :hungry
     a = :nothing
     αstar = RPBVI.findαstar(rip, b, s, a, pstar, αz)
     @test αstar ≈ 3.40325 atol = TOL
 
     # robust point based dp backup
-    ################### TO DO: CHECK ORACLE ######################
     srand(257349)
     αset = RPBVI.robustdpupdate(alphavecs, bset, rip)
     @test length(αset) == 6
     @test αset[1].alpha[1] ≈ 3.40325 atol = TOL
 
     # solver
-    ################### TO DO: CHECK ORACLE (for info)######################
     srand(429)
     bset = [[0, 1.0], [0.2, 0.8], [0.4, 0.6], [0.6,0.4], [0.8,0.2], [1.0,0.0]]
     p = BabyPOMDP()
@@ -75,13 +70,11 @@ TOL = 1e-6
     @test solrip.action_map == [:feed, :feed, :feed, :feed, :feed, :nothing]
 
     # beleif updates
-    ################### TO DO: CHECK ORACLE ######################
     b = SparseCat([:hungry, :full], [0.4, 0.6])
     @test update(updater(solp),b,:nothing,:crying).b[1] ≈ 0.8363636363636364 atol = TOL
     @test update(updater(solrp),b,:nothing,:crying).b[1] ≈ 0.8497474114178433 atol = TOL
 
     # simulate
-    ################### TO DO: CHECK ORACLE ######################
     sim = RolloutSimulator(max_steps = 1000)
     pbu = updater(solp)
     ipbu = updater(solip)
@@ -95,7 +88,6 @@ end # testset
 
 # Oracle values for ambiguity = 0 are from SARSOP
 # Oracle values for ambiguity = 0.001, 0.1 from RobustInfoPOMDP/correctness_test.jl
-# Plots make sense
 @testset "SARSOP Comparison: RPOMDP" begin
     vtol = 0.1
     srand(8473272)
