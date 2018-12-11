@@ -31,6 +31,8 @@ solver = RPBVISolver(beliefpoints = b, max_iterations = 10)
 policy = RobustValueIteration.solve(solver, rpomdp)
 ```
 
+Scripts for generating results and figures are available at [RobustInfoPOMDP](https://github.com/ajkeith/RobustInfoPOMDP).
+
 ## References
 The standard-reward robust point-based value iteration algorithm implements the pseudo code from Osogami (2015). The robust POMDP environment is a direct extension of [POMDPs.jl](https://github.com/JuliaPOMDP/POMDPs.jl), [POMDPModels.jl](https://github.com/JuliaPOMDP/POMDPModels.jl), and [POMDPModelTools.jl](https://github.com/JuliaPOMDP/POMDPModelTools.jl) to the robust setting. 
 
