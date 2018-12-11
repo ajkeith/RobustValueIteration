@@ -8,7 +8,7 @@ This application is built for Julia 0.6. If not already installed, the applicati
 Pkg.clone("https://github.com/ajkeith/RobustValueIteration")
 ```
 
-To solve robust POMDP models, `RPOMDPs`, `RPOMDPToolbox`, and `RPOMDPModels` also need to be cloned
+To solve robust POMDP models, `RPOMDPs`, `RPOMDPToolbox`, `RPOMDPModels`, and `SimpleProbabilitySets` also need to be cloned
 
 ```julia
 Pkg.clone("https://github.com/ajkeith/RPOMDPs.jl")
