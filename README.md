@@ -11,7 +11,7 @@ Pkg.clone("https://github.com/ajkeith/RobustValueIteration")
 To solve robust POMDP models, `RPOMDPs`, `RPOMDPToolbox`, `RPOMDPModels`, and `SimpleProbabilitySets` also need to be cloned
 
 ```julia
-Pkg.clone("https://github.com/ajkeith/RPOMDPs.jl")
+Pkg.clone("https://github.com/ajkeith/RPOMDPs.jl/tree/ajk/robust")
 Pkg.clone("https://github.com/ajkeith/RPOMDPToolbox.jl")
 Pkg.clone("https://github.com/ajkeith/RPOMDPModels.jl")
 Pkg.clone("https://github.com/ajkeith/SimpleProbabilitySets.jl")
