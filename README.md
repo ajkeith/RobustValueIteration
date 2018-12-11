@@ -28,7 +28,7 @@ using RPOMDPModels, RPOMDPs, RPOMDPToolbox, SimpleProbabilitySets
 rpomdp = RockRIPOMDP()
 b = [psample(zeros(4), ones(4)) for i = 1:10]
 solver = RPBVISolver(beliefpoints = b, max_iterations = 10)
-policy = solve(rpomdp, solver)
+policy = RobustValueIteration.solve(solver, rpomdp)
 ```
 
 ## References
