@@ -19,7 +19,7 @@ Pkg.clone("https://github.com/ajkeith/SimpleProbabilitySets.jl")
 
 ## Usage
 
-This solver can be with the robust POMDP applications. See [RPOMDPs.jl](https://github.com/ajkeith/RPOMDPs.jl), [RPOMDPToolbox.jl](https://github.com/ajkeith/RPOMDPToolbox.jl), [RPOMDPModels.jl](https://github.com/ajkeith/RPOMDPModels.jl), and [SimpleProbabilitySets.jl](https://github.com/ajkeith/SimpleProbabilitySets.jl) for details on writing robust POMDP problems and associated tools. 
+This solver can be used with the robust POMDP applications. See [RPOMDPs.jl](https://github.com/ajkeith/RPOMDPs.jl), [RPOMDPToolbox.jl](https://github.com/ajkeith/RPOMDPToolbox.jl), [RPOMDPModels.jl](https://github.com/ajkeith/RPOMDPModels.jl), and [SimpleProbabilitySets.jl](https://github.com/ajkeith/SimpleProbabilitySets.jl) for details on writing robust POMDP problems and associated tools. 
 
 ```julia
 using RobustValueIteration
